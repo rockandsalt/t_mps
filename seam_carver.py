@@ -57,31 +57,34 @@ def forward_energy(im):
 
 def forward_energy_3D(im):
     h = im.shape[0]
-    d = im.shape[0]
+    d = im.shape[2]
 
     energy = np.zeros_like(im)
     m = np.zeros_like(im)
 
-    U = np.roll(im, 1, axis=0)
+    iU = np.roll(im, 1, axis=0)
     L = np.roll(im, 1, axis=1)
     R = np.roll(im, -1, axis=1)
 
+    kU = np.roll(im, 1, axis=2)
+
     cU = np.abs(R - L)
-    cL = np.abs(U - L) + cU
-    cR = np.abs(U - R) + cU
+    cL = np.abs(iU - L) + np.abs(kU - L) + cU
+    cR = np.abs(iU - R) + np.abs(kU - R) + cU
 
     for k in range(1, d):
         for i in range(1, h):
-            mU = m[i-1]
+            mU = m[i-1,:,k-1]
             mL = np.roll(mU, 1)
             mR = np.roll(mU, -1)
 
             mULR = np.array([mU, mL, mR])
-            cULR = np.array([cU[i], cL[i], cR[i]])
+            cULR = np.array([cU[i,:,k], cL[i,:,k], cR[i,:,k]])
+
             mULR += cULR
 
             argmins = np.argmin(mULR, axis=0)
-            m[i] = np.choose(argmins, mULR)
+            m[i,:,k] = np.choose(argmins, mULR)
             energy[i, :, k] = np.choose(argmins, cULR)
 
     return energy
@@ -96,7 +99,7 @@ def get_minimum_seam(im):
     w = im.shape[1]
     d = im.shape[2]
 
-    M = combined_energy(im)
+    M = forward_energy_3D(im)
 
     backtrack = np.zeros_like(M, dtype=np.int)
 
