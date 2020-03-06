@@ -69,8 +69,8 @@ def forward_energy_3D(im):
     kU = np.roll(im, 1, axis=2)
 
     cU = np.abs(R - L)
-    cL = np.abs(iU - L) + np.abs(kU - L) + cU
-    cR = np.abs(iU - R) + np.abs(kU - R) + cU
+    cL = (np.abs(iU - L) + np.abs(kU - L))/2 + cU
+    cR = (np.abs(iU - R) + np.abs(kU - R))/2 + cU
 
     for k in range(1, d):
         for i in range(1, h):
@@ -122,11 +122,11 @@ def get_minimum_seam(im):
     seam_idx = []
     boolmask = np.ones((h, w, d), dtype=np.bool)
     j = np.argmin(M[-1, :, -1])
-    for k in range(d-1, -1, -1):
-        for i in range(h-1, -1, -1):
+    for i in range(h-1, -1, -1):
+        for k in range(d-1, -1, -1):
             boolmask[i, j, k] = False
             seam_idx.append((i, j, k))
-            j = backtrack[i, :, k]
+            j = backtrack[i, j, k]
 
     seam_idx.reverse()
     return np.array(seam_idx), boolmask
@@ -137,14 +137,7 @@ def merge_image(t_1, t_2):
 
     seam_idx, boolmask = get_minimum_seam(diff)
 
-    labelled, num_f = ndi.label(boolmask.astype('int'))
-
-    output = np.zeros_like(t_1)
-
-    output[labelled == 1] = t_1[labelled == 1]
-    output[labelled == 2] = t_2[labelled == 2]
-
-    return output, labelled
+    return boolmask
 
 
 if __name__ == "__main__":
@@ -156,10 +149,16 @@ if __name__ == "__main__":
     t_1 = image[0:150, 0:150, 0:150]
     t_2 = image[100:250, 100:250, 100:250]
 
-    output, label = merge_image(t_1, t_2)
+    label = merge_image(t_1, t_2)
 
     fig, ax = plt.subplots(1, 3)
     ax[0].imshow(t_1[..., 50])
     ax[1].imshow(label[..., 50])
     ax[2].imshow(t_2[..., 50])
+    plt.show()
+
+    fig, ax = plt.subplots(1, 3)
+    ax[0].imshow(t_1[50,...])
+    ax[1].imshow(label[50,...])
+    ax[2].imshow(t_2[50,...])
     plt.show()
