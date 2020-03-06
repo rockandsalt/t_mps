@@ -4,6 +4,7 @@
 from os import path
 from skimage.external import tifffile
 from skimage import filters
+from skimage import exposure
 
 import numpy as np
 import cv2
@@ -110,12 +111,15 @@ if __name__ == "__main__":
     im_path = path.join('.', 'data', 'CT_4_cr.tiff')
 
     image = tifffile.imread(im_path)
+    image = exposure.equalize_hist(image)
 
     t_1 = image[0:150,0:150,25]
     t_2 = image[100:250,100:250,125]
 
     output = merge_image(t_1, t_2)
 
-    fig, ax = plt.subplots()
-    ax.imshow(output, cmap = 'gray')
+    fig, ax = plt.subplots(1,3)
+    ax[0].imshow(t_1)
+    ax[1].imshow(output)
+    ax[2].imshow(t_2)
     plt.show()
