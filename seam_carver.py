@@ -122,8 +122,8 @@ def get_minimum_seam(im):
     seam_idx = []
     boolmask = np.ones((h, w, d), dtype=np.bool)
     j = np.argmin(M[-1, :, -1])
-    for i in range(h-1, -1, -1):
-        for k in range(d-1, -1, -1):
+    for k in range(d-1, -1, -1):
+        for i in range(h-1, -1, -1):
             boolmask[i, j, k] = False
             seam_idx.append((i, j, k))
             j = backtrack[i, j, k]
