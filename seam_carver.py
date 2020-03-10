@@ -11,6 +11,7 @@ from scipy import ndimage as ndi
 from matplotlib import pyplot as plt
 
 from collections import Counter
+from itertools import product
 
 
 def create_graph(im):
@@ -22,38 +23,40 @@ def create_graph(im):
     source = 0
     sink = np.max(ids) + 1
 
-    for i in range(shape[0]):
-        for j in range(shape[1]):
-            for k in range(shape[2]):
+    iter_ijk = product(range(shape[0]),
+                       range(shape[1]),
+                       range(shape[2]))
+
+    for i, j, k in iter_ijk:
                 # cost to remove ijk
-                if(j < (shape[0] - 1)):
-                    G.add_edge(ids[i, j, k], ids[i, j+1, k],
-                               capacity=np.abs(im[i, j+1, k] - im[i, j-1, k]))
+        if(j < (shape[0] - 1)):
+            G.add_edge(ids[i, j, k], ids[i, j+1, k],
+                       capacity=np.abs(im[i, j+1, k] - im[i, j-1, k]))
 
-                if(i < (shape[0]-1)):
-                    # i-LU
-                    G.add_edge(ids[i, j, k], ids[i+1, j, k],
-                               capacity=np.abs(im[i+1, j, k] - im[i, j-1, k]))
-                if( i > 0):
-                    # i+LU
-                    G.add_edge(ids[i, j, k], ids[i-1, j, k],
-                               capacity=np.abs(im[i-1, j, k] - im[i, j-1, k]))
+        if(i < (shape[0]-1)):
+            # i-LU
+            G.add_edge(ids[i, j, k], ids[i+1, j, k],
+                       capacity=np.abs(im[i+1, j, k] - im[i, j-1, k]))
+        if(i > 0):
+            # i+LU
+            G.add_edge(ids[i, j, k], ids[i-1, j, k],
+                       capacity=np.abs(im[i-1, j, k] - im[i, j-1, k]))
 
-                if(k < (shape[2]-1)):
-                    # k-LU
-                    G.add_edge(ids[i, j, k], ids[i, j, k+1],
-                               capacity=np.abs(im[i, j, k+1] - im[i, j-1, k]))
+        if(k < (shape[2]-1)):
+            # k-LU
+            G.add_edge(ids[i, j, k], ids[i, j, k+1],
+                       capacity=np.abs(im[i, j, k+1] - im[i, j-1, k]))
 
-                if(k > 0):
-                    # k+LU
-                    G.add_edge(ids[i, j, k], ids[i, j, k-1],
-                               capacity=np.abs(im[i, j, k-1] - im[i, j-1, k]))
+        if(k > 0):
+            # k+LU
+            G.add_edge(ids[i, j, k], ids[i, j, k-1],
+                       capacity=np.abs(im[i, j, k-1] - im[i, j-1, k]))
 
-                if j == 0:
-                    G.add_edge(source, ids[i, j, k], capacity=1.0)
+        if j == 0:
+            G.add_edge(source, ids[i, j, k], capacity=1.0)
 
-                if j == (shape[2] - 1):
-                    G.add_edge(ids[i, j, k], sink, capacity=1.0)
+        if j == (shape[2] - 1):
+            G.add_edge(ids[i, j, k], sink, capacity=1.0)
 
     return G, ids, source, sink
 
