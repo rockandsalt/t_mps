@@ -93,7 +93,7 @@ if __name__ == "__main__":
     image = exposure.equalize_hist(image)
 
     t_1 = image[0:150, 0:150, 0:150]
-    t_2 = image[100:250, 100:250, 100:250]
+    t_2 = image[250:400, 250:400, 250:400]
 
     output = merge_image(t_1, t_2)
 
