@@ -4,7 +4,10 @@ from skimage import filters
 from skimage import exposure
 
 import numpy as np
-import networkx as nx
+
+from graph_tool import Graph
+from graph_tool import flow
+
 from numba import jit, njit, prange
 from scipy import ndimage as ndi
 
@@ -16,7 +19,8 @@ from itertools import product
 
 def create_graph(im):
     shape = im.shape
-    G = nx.DiGraph()
+    G = Graph(directed=True)
+    e_prop = g.new_edge_property("weight")
 
     ids = np.arange(len(im.ravel())).reshape(shape) + 1
 
@@ -30,33 +34,33 @@ def create_graph(im):
     for i, j, k in iter_ijk:
                 # cost to remove ijk
         if(j < (shape[0] - 1)):
-            G.add_edge(ids[i, j, k], ids[i, j+1, k],
-                       capacity=np.abs(im[i, j+1, k] - im[i, j-1, k]))
+            e = G.add_edge(ids[i, j, k], ids[i, j+1, k])
+            e_prop[e] = np.abs(im[i, j+1, k] - im[i, j-1, k])
 
         if(i < (shape[0]-1)):
             # i-LU
-            G.add_edge(ids[i, j, k], ids[i+1, j, k],
-                       capacity=np.abs(im[i+1, j, k] - im[i, j-1, k]))
+            e = G.add_edge(ids[i, j, k], ids[i+1, j, k])
+            e_prop[e] = np.abs(im[i+1, j, k] - im[i, j-1, k])   
         if(i > 0):
             # i+LU
-            G.add_edge(ids[i, j, k], ids[i-1, j, k],
-                       capacity=np.abs(im[i-1, j, k] - im[i, j-1, k]))
-
+            e = G.add_edge(ids[i, j, k], ids[i-1, j, k])
+            e_prop[e] = np.abs(im[i-1, j, k] - im[i, j-1, k])
         if(k < (shape[2]-1)):
             # k-LU
-            G.add_edge(ids[i, j, k], ids[i, j, k+1],
-                       capacity=np.abs(im[i, j, k+1] - im[i, j-1, k]))
-
+            e = G.add_edge(ids[i, j, k], ids[i, j, k+1])
+            e_prop[e] = np.abs(im[i, j, k+1] - im[i, j-1, k])
         if(k > 0):
             # k+LU
-            G.add_edge(ids[i, j, k], ids[i, j, k-1],
-                       capacity=np.abs(im[i, j, k-1] - im[i, j-1, k]))
+            e = G.add_edge(ids[i, j, k], ids[i, j, k-1])
+            e_prop[e] = np.abs(im[i, j, k-1] - im[i, j-1, k])
 
         if j == 0:
-            G.add_edge(source, ids[i, j, k], capacity=1.0)
+            e = G.add_edge(source, ids[i, j, k])
+            e_prop[e] = 1.0
 
         if j == (shape[2] - 1):
-            G.add_edge(ids[i, j, k], sink, capacity=1.0)
+            e = G.add_edge(ids[i, j, k], sink)
+            e_prop[e] = 1.0
 
     return G, ids, source, sink
 
@@ -65,23 +69,11 @@ def merge_image(t_1, t_2):
     diff = np.abs(t_1 - t_2)
 
     graph, ids, source, sink = create_graph(diff)
-
-    cut, partition = nx.minimum_cut(graph, source, sink)
-
-    t_1_set, t_2_set = partition
+    cap = g.edge_properties["weight"]
+    res = flow.boykov_kolmogorov_max_flow(graph, source, sink, capacity = cap)
+    partition = flow.min_st_cut(graph, source, cap, res)
+    
     output = np.zeros_like(t_1)
-
-    print(Counter(t_1_set) == Counter(t_1_set))
-
-    for node in t_1_set:
-        if node != source and node != sink:
-            indice = np.nonzero(ids == node)
-            output[indice] = t_1[indice]
-
-    for node in t_2_set:
-        if node != source and node != sink:
-            indice = np.nonzero(ids == node)
-            output[indice] = t_2[indice]
 
     return output
 
