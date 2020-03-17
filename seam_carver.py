@@ -5,7 +5,6 @@ from skimage import exposure
 
 import numpy as np
 import networkx as nx
-from numba import jit, njit, prange
 from scipy import ndimage as ndi
 
 from matplotlib import pyplot as plt
@@ -29,7 +28,7 @@ def create_graph(im):
 
     for i, j, k in iter_ijk:
                 # cost to remove ijk
-        if(j < (shape[0] - 1)):
+        if(j < (shape[2] - 1)):
             G.add_edge(ids[i, j, k], ids[i, j+1, k],
                        capacity=np.abs(im[i, j+1, k] - im[i, j-1, k]))
 
@@ -71,8 +70,6 @@ def merge_image(t_1, t_2):
     t_1_set, t_2_set = partition
     output = np.zeros_like(t_1)
 
-    print(Counter(t_1_set) == Counter(t_1_set))
-
     for node in t_1_set:
         if node != source and node != sink:
             indice = np.nonzero(ids == node)
@@ -92,13 +89,20 @@ if __name__ == "__main__":
     image = tifffile.imread(im_path)
     image = exposure.equalize_hist(image)
 
-    t_1 = image[0:150, 0:150, 0:150]
-    t_2 = image[250:400, 250:400, 250:400]
+    t_1 = image[0:100, 0:100, 0:100]
+    t_2 = image[250:350, 250:350, 250:350]
 
     output = merge_image(t_1, t_2)
 
-    fig, axs = plt.subplots(1, 3)
-    axs[0].imshow(t_1[..., 50])
-    axs[1].imshow(output[..., 50])
-    axs[2].imshow(t_2[..., 50])
+    fig, axs = plt.subplots(2, 4)
+    axs[0,0].imshow(t_1[..., 10])
+    axs[0,1].imshow(output[..., 10] == t_1[..., 10])
+    axs[0,2].imshow(output[..., 10])
+    axs[0,3].imshow(t_2[..., 10])
+
+    axs[1,0].imshow(t_1[10,...])
+    axs[1,1].imshow(output[10,...] == t_1[10,...])
+    axs[1,2].imshow(output[10,...])
+    axs[1,3].imshow(t_2[10,...])
     plt.show()
+
